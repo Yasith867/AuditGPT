@@ -209,8 +209,8 @@ export default function App() {
                 <span>Powered by Gemini 3.0 Pro (Thinking Mode) & PolygonScan</span>
               </div>
               <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white leading-tight">
-                Production-Grade <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 animate-gradient">Smart Contract Audit</span>
+                Smart Contract Audit <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 animate-gradient">on Polygon</span>
               </h1>
               <p className="text-lg text-slate-400 max-w-2xl mx-auto">
                 Enter a verified contract address or paste source code to perform a real-time deep static analysis, gas profiling, and economic security check.
