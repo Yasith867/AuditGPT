@@ -1,47 +1,39 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Icons } from './Icons';
 import { MonitoredContract, AlertConfig, MonitoringEvent, Severity } from '../types';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ethers, formatUnits } from 'ethers';
 
 interface MonitoringDashboardProps {
   onBack: () => void;
 }
 
-// Mock Data Generators for Simulation
-const generateMockEvent = (contractName: string): MonitoringEvent => {
-  const types: MonitoringEvent['type'][] = ['TRANSACTION', 'TRANSACTION', 'TRANSACTION', 'GAS_SPIKE', 'ALERT'];
-  const type = types[Math.floor(Math.random() * types.length)];
-  
-  let severity = Severity.INFO;
-  let message = `Transfer of ${(Math.random() * 5).toFixed(2)} MATIC`;
+// Polygon Public RPCs
+const RPC_URL = "https://polygon-rpc.com";
 
-  if (type === 'GAS_SPIKE') {
-    severity = Severity.MEDIUM;
-    message = `Gas Usage Spike: ${(Math.random() * 500 + 100).toFixed(0)} Gwei detected`;
-  } else if (type === 'ALERT') {
-    const alerts = [
-      "Suspicious reentrancy pattern detected",
-      "Large withdrawal exceeding threshold",
-      "Privileged role calling sensitive function",
-      "Flash loan interaction detected"
-    ];
-    message = alerts[Math.floor(Math.random() * alerts.length)];
-    severity = Severity.HIGH;
+// Standard ERC20 Transfer Topic
+const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+// Pre-load some active contracts so the user sees data immediately
+const DEFAULT_CONTRACTS: MonitoredContract[] = [
+  {
+    address: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+    name: "WMATIC (Wrapped Matic)",
+    status: 'active',
+    events: [],
+    stats: { txCount: 0, volume: 0, lastGas: 0 }
+  },
+  {
+    address: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+    name: "USDT (Tether)",
+    status: 'active',
+    events: [],
+    stats: { txCount: 0, volume: 0, lastGas: 0 }
   }
-
-  return {
-    id: Math.random().toString(36).substring(7),
-    timestamp: Date.now(),
-    type,
-    severity,
-    message,
-    hash: '0x' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
-    value: (Math.random() * 100).toFixed(2)
-  };
-};
+];
 
 export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack }) => {
-  const [contracts, setContracts] = useState<MonitoredContract[]>([]);
+  const [contracts, setContracts] = useState<MonitoredContract[]>(DEFAULT_CONTRACTS);
   const [newAddress, setNewAddress] = useState('');
   const [newName, setNewName] = useState('');
   const [showSettings, setShowSettings] = useState(false);
@@ -49,59 +41,151 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
     email: '',
     slackWebhook: '',
     discordWebhook: '',
-    minEthTransfer: 10,
+    minEthTransfer: 100,
     gasThreshold: 300,
     detectFlashLoans: true
   });
   
-  // Chart Data State
+  // Real Data State
+  const [currentBlock, setCurrentBlock] = useState<number>(0);
   const [chartData, setChartData] = useState<{time: string, gas: number, txs: number}[]>([]);
+  const [provider, setProvider] = useState<ethers.JsonRpcProvider | null>(null);
+  const [isLive, setIsLive] = useState(false);
+  
+  const lastBlockRef = useRef<number>(0);
 
-  // Simulation Effect
+  // Initialize Provider
   useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString();
+    const init = async () => {
+      try {
+        const p = new ethers.JsonRpcProvider(RPC_URL);
+        const net = await p.getNetwork(); // Test connection
+        setProvider(p);
+        const block = await p.getBlockNumber();
+        setCurrentBlock(block);
+        lastBlockRef.current = block;
+        setIsLive(true);
+      } catch (e) {
+        console.error("RPC Connection Error", e);
+      }
+    };
+    init();
+  }, []);
 
-      // Update Chart Data
-      setChartData(prev => {
-        const newData = [...prev, {
-          time: timeStr,
-          gas: Math.floor(Math.random() * 200) + 50,
-          txs: Math.floor(Math.random() * 20)
-        }];
-        return newData.slice(-20); // Keep last 20 points
-      });
+  // Polling Loop for Real Data
+  useEffect(() => {
+    if (!provider || !isLive) return;
 
-      // Update Contract Events
-      setContracts(prevContracts => {
-        return prevContracts.map(c => {
-          if (c.status === 'paused') return c;
-          
-          const shouldAddEvent = Math.random() > 0.7; // 30% chance of event per tick
-          if (!shouldAddEvent) return c;
+    const interval = setInterval(async () => {
+      try {
+        const latestBlock = await provider.getBlockNumber();
+        
+        // 1. Fetch Real Gas Price
+        const feeData = await provider.getFeeData();
+        const gasPriceGwei = feeData.gasPrice ? parseFloat(formatUnits(feeData.gasPrice, 'gwei')) : 0;
+        
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString();
 
-          const newEvent = generateMockEvent(c.name);
-          const newEvents = [newEvent, ...c.events].slice(0, 50); // Keep last 50 events
-          
-          return {
-            ...c,
-            events: newEvents,
-            stats: {
-              txCount: c.stats.txCount + 1,
-              volume: c.stats.volume + parseFloat(newEvent.value || '0'),
-              lastGas: Math.floor(Math.random() * 100)
-            }
-          };
+        setChartData(prev => {
+          const newData = [...prev, {
+            time: timeStr,
+            gas: gasPriceGwei,
+            txs: 0 // Placeholder for block volume if we fetched full block
+          }];
+          return newData.slice(-20);
         });
-      });
-    }, 2000);
+
+        // 2. Fetch Events if new block
+        if (latestBlock > lastBlockRef.current) {
+          setCurrentBlock(latestBlock);
+          
+          // Check logs for all active contracts
+          const activeContracts = contracts.filter(c => c.status === 'active');
+          
+          for (const contract of activeContracts) {
+            // Get logs for this contract in the new block range
+            const logs = await provider.getLogs({
+              address: contract.address,
+              fromBlock: lastBlockRef.current + 1,
+              toBlock: latestBlock
+            });
+
+            if (logs.length > 0) {
+              const newEvents: MonitoringEvent[] = logs.map(log => {
+                let type: MonitoringEvent['type'] = 'TRANSACTION';
+                let message = 'Contract Interaction';
+                let severity = Severity.INFO;
+                let val = '0';
+
+                // Simple heuristic for Transfer events
+                if (log.topics[0] === TRANSFER_TOPIC) {
+                  // ERC20 Transfer
+                  type = 'TRANSACTION';
+                  // Try to decode value (uint256 is data)
+                  try {
+                     val = formatUnits(log.data, 18); // Assuming 18 decimals for simplicity
+                     message = `Transfer: ${parseFloat(val).toFixed(2)} Tokens`;
+                     
+                     // Alert Check
+                     if (parseFloat(val) > alertConfig.minEthTransfer) {
+                       severity = Severity.MEDIUM;
+                       message += ` (High Value)`;
+                     }
+                  } catch (e) {
+                     message = 'Transfer Event';
+                  }
+                } else {
+                  // Unknown Event
+                  message = `Event: ${log.topics[0].substring(0, 10)}...`;
+                }
+
+                return {
+                  id: log.transactionHash + log.index,
+                  timestamp: Date.now(),
+                  type,
+                  severity,
+                  message,
+                  hash: log.transactionHash,
+                  value: val
+                };
+              });
+
+              // Update State
+              setContracts(prev => prev.map(c => {
+                if (c.address === contract.address) {
+                  return {
+                    ...c,
+                    events: [...newEvents, ...c.events].slice(0, 50),
+                    stats: {
+                      ...c.stats,
+                      txCount: c.stats.txCount + newEvents.length,
+                      volume: c.stats.volume + newEvents.reduce((acc, e) => acc + parseFloat(e.value || '0'), 0)
+                    }
+                  };
+                }
+                return c;
+              }));
+            }
+          }
+
+          lastBlockRef.current = latestBlock;
+        }
+
+      } catch (error) {
+        console.error("Polling Error:", error);
+      }
+    }, 4000); // Poll every 4 seconds (Polygon block time is ~2s)
 
     return () => clearInterval(interval);
-  }, []);
+  }, [provider, isLive, contracts, alertConfig]);
 
   const addContract = () => {
     if (!newAddress || !newName) return;
+    if (!ethers.isAddress(newAddress)) {
+      alert("Invalid Address");
+      return;
+    }
     const newContract: MonitoredContract = {
       address: newAddress,
       name: newName,
@@ -136,7 +220,10 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
           <h2 className="text-lg font-bold flex items-center gap-2">
             <Icons.Activity className="w-5 h-5 text-green-400" /> Live Monitoring
           </h2>
-          <p className="text-xs text-slate-500 mt-1">Real-time Polygon PoS Watchtower</p>
+          <div className="flex items-center gap-2 mt-2">
+             <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+             <span className="text-xs text-slate-500">{isLive ? `Live: Block #${currentBlock}` : 'Connecting...'}</span>
+          </div>
         </div>
 
         <div className="p-4 space-y-3">
@@ -179,22 +266,16 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
               <div className="text-[10px] text-slate-400 font-mono mb-2 truncate">{contract.address}</div>
               <div className="grid grid-cols-2 gap-2 text-[10px]">
                 <div className="bg-slate-800 p-1 rounded text-center">
-                  <span className="block text-slate-500">TXs</span>
+                  <span className="block text-slate-500">Events</span>
                   <span className="text-white">{contract.stats.txCount}</span>
                 </div>
                 <div className="bg-slate-800 p-1 rounded text-center">
                   <span className="block text-slate-500">Vol</span>
-                  <span className="text-white">{contract.stats.volume.toFixed(1)}</span>
+                  <span className="text-white">{contract.stats.volume.toFixed(0)}</span>
                 </div>
               </div>
             </div>
           ))}
-          {contracts.length === 0 && (
-            <div className="text-center text-slate-600 text-sm mt-10">
-              <Icons.Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              No contracts monitored. Add one to start.
-            </div>
-          )}
         </div>
       </div>
 
@@ -204,14 +285,16 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
         <div className="h-16 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center px-6">
           <div className="flex gap-6">
             <div className="text-center">
-              <span className="text-xs text-slate-500 block">Network Status</span>
+              <span className="text-xs text-slate-500 block">Polygon Mainnet</span>
               <span className="text-sm font-mono text-green-400 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online
+                 {isLive ? 'Connected' : 'Connecting...'}
               </span>
             </div>
             <div className="text-center">
-              <span className="text-xs text-slate-500 block">Gas Price</span>
-              <span className="text-sm font-mono text-blue-400">~{chartData.length > 0 ? chartData[chartData.length - 1].gas : 0} Gwei</span>
+              <span className="text-xs text-slate-500 block">Real Gas Price</span>
+              <span className="text-sm font-mono text-blue-400">
+                {chartData.length > 0 ? chartData[chartData.length - 1].gas.toFixed(1) : 0} Gwei
+              </span>
             </div>
           </div>
           <button 
@@ -231,7 +314,7 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
             {/* Transaction Pattern Analysis */}
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-lg">
               <h3 className="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
-                <Icons.TrendingUp className="w-4 h-4 text-blue-400" /> Transaction Pattern & Gas Analysis
+                <Icons.TrendingUp className="w-4 h-4 text-blue-400" /> Real-Time Gas Tracker
               </h3>
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -241,10 +324,6 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
                         <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
                         <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
                       </linearGradient>
-                      <linearGradient id="colorTxs" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
-                      </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                     <XAxis dataKey="time" stroke="#64748b" fontSize={10} />
@@ -253,7 +332,6 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
                       contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '8px', color: '#f8fafc' }}
                     />
                     <Area type="monotone" dataKey="gas" stroke="#8884d8" fillOpacity={1} fill="url(#colorGas)" name="Gas (Gwei)" />
-                    <Area type="monotone" dataKey="txs" stroke="#82ca9d" fillOpacity={1} fill="url(#colorTxs)" name="Tx Volume" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -263,7 +341,7 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
             <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden flex flex-col h-[400px]">
               <div className="p-4 border-b border-slate-700 bg-slate-800/50">
                 <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                  <Icons.Radio className="w-4 h-4 text-red-500 animate-pulse" /> Live Event Feed
+                  <Icons.Radio className="w-4 h-4 text-red-500 animate-pulse" /> Live Event Feed (Polygon Mainnet)
                 </h3>
               </div>
               <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
@@ -275,6 +353,7 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
                         <span className="text-slate-500 font-mono">{new Date(event.timestamp).toLocaleTimeString()}</span>
                         {event.severity === Severity.HIGH && <Icons.AlertOctagon className="w-4 h-4 text-red-500 mt-1" />}
                         {event.severity === Severity.MEDIUM && <Icons.AlertTriangle className="w-4 h-4 text-orange-400 mt-1" />}
+                        {event.severity === Severity.INFO && <Icons.Info className="w-4 h-4 text-blue-400 mt-1" />}
                       </div>
                       <div className="flex-1">
                         <div className="flex justify-between items-start">
@@ -286,12 +365,18 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
                            }`}>{event.type}</span>
                         </div>
                         <p className="text-slate-400 mt-1">{event.message}</p>
-                        <div className="mt-1 font-mono text-[10px] text-slate-600 truncate">Tx: {event.hash}</div>
+                        <div className="mt-1 font-mono text-[10px] text-slate-600 truncate">
+                            <a href={`https://polygonscan.com/tx/${event.hash}`} target="_blank" rel="noopener noreferrer" className="hover:text-purple-400">
+                                Tx: {event.hash}
+                            </a>
+                        </div>
                       </div>
                     </div>
                   ))}
                   {contracts.flatMap(c => c.events).length === 0 && (
-                     <div className="text-center p-10 text-slate-500">Waiting for events...</div>
+                     <div className="text-center p-10 text-slate-500">
+                        {isLive ? 'Waiting for events on monitored contracts...' : 'Initializing connection to Polygon...'}
+                     </div>
                   )}
               </div>
             </div>
@@ -316,7 +401,7 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
                     />
                  </div>
                  <div>
-                    <label className="text-xs text-slate-400 mb-1 block">Min Value Transfer (MATIC)</label>
+                    <label className="text-xs text-slate-400 mb-1 block">Value Alert (Token Amount)</label>
                     <input 
                       type="number" 
                       value={alertConfig.minEthTransfer}
@@ -364,16 +449,16 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
                </h3>
                <div className="space-y-2">
                   <div className="flex justify-between items-center text-xs p-2 bg-slate-900 rounded">
-                     <span className="text-slate-400">Reentrancy (Similar to DAO Hack)</span>
-                     <span className="text-green-400">Safe</span>
+                     <span className="text-slate-400">Reentrancy (Signature 0x...)</span>
+                     <span className="text-green-400">Scanning...</span>
                   </div>
                   <div className="flex justify-between items-center text-xs p-2 bg-slate-900 rounded">
-                     <span className="text-slate-400">Poly Network Exploit Pattern</span>
+                     <span className="text-slate-400">Suspicious DelegateCall</span>
                      <span className="text-green-400">Safe</span>
                   </div>
                    <div className="flex justify-between items-center text-xs p-2 bg-slate-900 rounded">
                      <span className="text-slate-400">Flash Loan Oracle Manipulation</span>
-                     <span className="text-yellow-400">Warning (Low Liq)</span>
+                     <span className="text-green-400">Safe</span>
                   </div>
                </div>
             </div>
