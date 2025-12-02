@@ -93,7 +93,8 @@ export const generatePDF = (report: AuditReport) => {
   let xPos = margin;
   stats.forEach(stat => {
     if (stat.count > 0) {
-      doc.setFillColor(...stat.color);
+      // FIX: Explicitly pass arguments instead of spread to satisfy TypeScript tuple requirements
+      doc.setFillColor(stat.color[0], stat.color[1], stat.color[2]);
       doc.rect(xPos, yPos - 5, 40, 15, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(10);
