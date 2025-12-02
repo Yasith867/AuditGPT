@@ -116,35 +116,59 @@ const REPORT_SCHEMA: Schema = {
 export const performFullAudit = async (sourceCode: string, contractName?: string): Promise<AuditReport> => {
   if (!API_KEY) throw new Error("API Key missing. Please check your environment configuration.");
 
-  try {
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: `AUDIT TARGET SOURCE CODE (${contractName || 'Unknown'}):\n\n${sourceCode}` }]
-        }
-      ],
-      config: {
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
+
+  // Define helper to run analysis with specific model config
+  const runAnalysis = async (modelName: string, useThinking: boolean) => {
+      const config: any = {
         systemInstruction: AUDIT_SYSTEM_PROMPT,
         responseMimeType: "application/json",
         responseSchema: REPORT_SCHEMA,
-        thinkingConfig: {
-          thinkingBudget: 32768
-        }
+      };
+
+      if (useThinking) {
+        config.thinkingConfig = { thinkingBudget: 32768 };
       }
-    });
+
+      return await ai.models.generateContent({
+        model: modelName,
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: `AUDIT TARGET SOURCE CODE (${contractName || 'Unknown'}):\n\n${sourceCode}` }]
+          }
+        ],
+        config: config
+      });
+  };
+
+  try {
+    let response;
+    try {
+      // First try with the powerful thinking model
+      response = await runAnalysis('gemini-3-pro-preview', true);
+    } catch (primaryError: any) {
+      console.warn("Gemini 3.0 Pro failed, falling back to Flash...", primaryError);
+      // Fallback to Flash if Pro fails (e.g. 503, 429, or model access issues)
+      response = await runAnalysis('gemini-2.5-flash', false);
+    }
 
     if (!response.text) throw new Error("AI Analysis failed to generate output");
 
     let cleanJson = response.text.trim();
-    // Remove markdown code blocks if present
-    if (cleanJson.startsWith('```json')) {
-      cleanJson = cleanJson.replace(/^```json/, '').replace(/```$/, '');
-    } else if (cleanJson.startsWith('```')) {
-      cleanJson = cleanJson.replace(/^```/, '').replace(/```$/, '');
+    
+    // Robust JSON Extraction
+    // 1. Try to find markdown block
+    const jsonBlockMatch = cleanJson.match(/```json\s*([\s\S]*?)\s*```/i);
+    if (jsonBlockMatch) {
+      cleanJson = jsonBlockMatch[1];
+    } else {
+      // 2. If no block, try to find the outer braces if the text contains extra conversation
+      const firstBrace = cleanJson.indexOf('{');
+      const lastBrace = cleanJson.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
+      }
     }
 
     let data;
