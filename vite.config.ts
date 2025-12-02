@@ -8,8 +8,8 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // Polyfill process.env.API_KEY for the client side
-      'process.env.API_KEY': JSON.stringify(env.API_KEY)
+      // Polyfill process.env.API_KEY for the client side. Ensure it defaults to empty string if undefined.
+      'process.env.API_KEY': JSON.stringify(env.API_KEY || '')
     }
   };
 });

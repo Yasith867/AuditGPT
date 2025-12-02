@@ -2,7 +2,6 @@ import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AuditReport, Severity } from '../types';
 
 const API_KEY = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 const AUDIT_SYSTEM_PROMPT = `
 You are AuditGPT, a world-class Smart Contract Auditor and Security Researcher specialized in the Polygon PoS EVM ecosystem.
@@ -118,6 +117,8 @@ export const performFullAudit = async (sourceCode: string, contractName?: string
   if (!API_KEY) throw new Error("API Key missing. Please check your environment configuration.");
 
   try {
+    const ai = new GoogleGenAI({ apiKey: API_KEY });
+    
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: [
