@@ -124,6 +124,9 @@ export const performFullAudit = async (sourceCode: string, contractName?: string
         systemInstruction: AUDIT_SYSTEM_PROMPT,
         responseMimeType: "application/json",
         responseSchema: REPORT_SCHEMA,
+        // Force deterministic output
+        temperature: 0,
+        seed: 42,
       };
 
       if (useThinking) {
