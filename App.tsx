@@ -210,33 +210,49 @@ export default function App() {
           <div className="max-w-6xl mx-auto px-4 py-12 sm:px-6 lg:px-8 flex flex-col items-center justify-start min-h-[calc(100vh-64px)]">
             
             {/* Simple App Header */}
-            <div className="text-center mb-8 space-y-2 animate-in fade-in slide-in-from-top-4">
-              <h1 className="text-3xl font-bold text-white">Smart Contract Audit on Polygon</h1>
-              <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-                Paste source code to perform a real-time deep static analysis, gas profiling, and economic security check.
+            <div className="text-center mb-10 space-y-4 animate-in fade-in slide-in-from-top-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-medium backdrop-blur-sm">
+                <Icons.Shield className="w-3 h-3" />
+                <span>Production-Grade Security Analysis</span>
+              </div>
+              <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight">
+                Audit Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">Polygon Smart Contracts</span>
+              </h1>
+              <p className="text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                Paste your Solidity code below to perform a deep static analysis, optimize gas usage, and identify economic risks using advanced AI reasoning.
               </p>
             </div>
 
             {/* Input Section */}
-            <div className="w-full max-w-2xl bg-slate-800/40 backdrop-blur border border-slate-700 rounded-2xl p-2 shadow-2xl relative overflow-hidden transition-all duration-300">
+            <div className="w-full max-w-3xl bg-slate-800/40 backdrop-blur border border-slate-700 rounded-2xl p-2 shadow-2xl relative overflow-hidden transition-all duration-300">
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 pointer-events-none"></div>
               
               <div className="p-6 space-y-4 relative z-10">
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                      <Icons.FileCode className="w-4 h-4" />
-                      Solidity Source Code
-                  </label>
-                  <div className="relative">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                        <Icons.FileCode className="w-4 h-4 text-purple-400" />
+                        Solidity Source Code
+                    </label>
+                    <span className="text-[10px] text-slate-500 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700">
+                       Supports Solidity 0.5 - 0.8+
+                    </span>
+                  </div>
+                  <div className="relative group">
                     <textarea
-                        className="w-full h-48 bg-slate-900 border border-slate-700 rounded-xl p-4 text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-mono text-xs shadow-inner custom-scrollbar resize-none leading-relaxed"
-                        placeholder="// Paste your Solidity code here..."
+                        className="w-full h-64 bg-slate-900 border border-slate-700 rounded-xl p-4 text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent font-mono text-xs shadow-inner custom-scrollbar resize-none leading-relaxed transition-all"
+                        placeholder={`// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract SecureContract {
+    // Paste your Solidity source code here...
+}`}
                         value={sourceInput}
                         onChange={(e) => setSourceInput(e.target.value)}
                         disabled={appState === AppState.PROCESSING}
                         spellCheck={false}
                     />
-                    <div className="absolute bottom-2 right-4 text-[10px] text-slate-600">
+                    <div className="absolute bottom-3 right-4 text-[10px] text-slate-600 font-mono bg-slate-900/80 px-2 py-1 rounded">
                       {sourceInput.length} chars
                     </div>
                   </div>
