@@ -63,7 +63,7 @@ export const LandingSections: React.FC = () => {
       <section className="relative overflow-hidden bg-slate-800/30 rounded-3xl p-8 md:p-12 border border-slate-700/50">
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-purple-500/5 to-blue-500/5 pointer-events-none"></div>
         <div className="relative z-10">
-          <h2 className="text-2xl font-bold text-white mb-8 text-center">How It Works</h2>
+          <h2 className="text-2xl font-bold text-white mb-12 text-center">How It Works</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <Step 
               num="01" 
@@ -109,10 +109,11 @@ const FeatureRow = ({ title, desc }: any) => (
 );
 
 const Step = ({ num, title, desc }: any) => (
-  <div className="text-center space-y-3">
-    <div className="text-4xl font-black text-slate-700/50 font-mono">{num}</div>
-    <h3 className="text-xl font-bold text-white">{title}</h3>
-    <p className="text-slate-400 text-sm">{desc}</p>
+  <div className="text-center space-y-3 relative group">
+    <div className="text-5xl font-black text-slate-800 absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 scale-150 opacity-50 select-none z-0">{num}</div>
+    <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-blue-500 font-mono relative z-10">{num}</div>
+    <h3 className="text-xl font-bold text-white relative z-10 pt-2">{title}</h3>
+    <p className="text-slate-400 text-sm relative z-10">{desc}</p>
   </div>
 );
 
