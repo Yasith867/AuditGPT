@@ -51,26 +51,41 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
   const [chartData, setChartData] = useState<{time: string, gas: number, txs: number}[]>([]);
   const [provider, setProvider] = useState<ethers.JsonRpcProvider | null>(null);
   const [isLive, setIsLive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
   
   const lastBlockRef = useRef<number>(0);
 
   // Initialize Provider
   useEffect(() => {
     const init = async () => {
+      setIsLive(false);
+      setError(null);
       try {
         const p = new ethers.JsonRpcProvider(RPC_URL);
-        const net = await p.getNetwork(); // Test connection
+        
+        // Race condition to handle timeouts if RPC is hanging
+        const net = await Promise.race([
+          p.getNetwork(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 5000))
+        ]);
+
         setProvider(p);
         const block = await p.getBlockNumber();
         setCurrentBlock(block);
         lastBlockRef.current = block;
         setIsLive(true);
-      } catch (e) {
+      } catch (e: any) {
         console.error("RPC Connection Error", e);
+        let msg = "Failed to connect to Polygon RPC.";
+        if (e.message.includes("timeout")) msg = "Connection timed out. Network may be congested.";
+        else if (e.message.includes("429")) msg = "Rate limit exceeded. Please wait a moment.";
+        else if (e.code === "NETWORK_ERROR") msg = "Network error. Check your internet connection.";
+        setError(msg);
       }
     };
     init();
-  }, []);
+  }, [retryTrigger]);
 
   // Polling Loop for Real Data
   useEffect(() => {
@@ -170,15 +185,24 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
           }
 
           lastBlockRef.current = latestBlock;
+          
+          // Clear transient errors if successful
+          if (error) setError(null);
         }
 
-      } catch (error) {
-        console.error("Polling Error:", error);
+      } catch (err: any) {
+        console.error("Polling Error:", err);
+        // Don't kill the connection on intermittent errors, but show warning
+        if (err.message?.includes("429")) {
+           setError("Rate limit warning (429). Slowing down...");
+        } else if (err.code === "NETWORK_ERROR" || err.message?.includes("network")) {
+           setError("Connection unstable. Retrying...");
+        }
       }
     }, 4000); // Poll every 4 seconds (Polygon block time is ~2s)
 
     return () => clearInterval(interval);
-  }, [provider, isLive, contracts, alertConfig]);
+  }, [provider, isLive, contracts, alertConfig, error]);
 
   const addContract = () => {
     if (!newAddress || !newName) return;
@@ -207,6 +231,10 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
       c.address === address ? { ...c, status: c.status === 'active' ? 'paused' : 'active' } : c
     ));
   };
+  
+  const handleRetry = () => {
+    setRetryTrigger(prev => prev + 1);
+  };
 
   return (
     <div className="flex h-[calc(100vh-64px)] bg-slate-900 text-slate-100 overflow-hidden animate-in fade-in duration-500">
@@ -220,9 +248,21 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
           <h2 className="text-lg font-bold flex items-center gap-2">
             <Icons.Activity className="w-5 h-5 text-green-400" /> Live Monitoring
           </h2>
-          <div className="flex items-center gap-2 mt-2">
-             <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-             <span className="text-xs text-slate-500">{isLive ? `Live: Block #${currentBlock}` : 'Connecting...'}</span>
+          <div className="flex flex-col gap-2 mt-2">
+             <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${isLive && !error ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                <span className={`text-xs ${error ? 'text-red-400 font-bold' : 'text-slate-500'}`}>
+                  {error ? 'Connection Failed' : isLive ? `Live: Block #${currentBlock}` : 'Connecting...'}
+                </span>
+             </div>
+             {error && (
+               <button 
+                 onClick={handleRetry}
+                 className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-1 rounded hover:bg-red-500/20 transition-colors w-full"
+               >
+                 Retry Connection
+               </button>
+             )}
           </div>
         </div>
 
@@ -286,8 +326,8 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
           <div className="flex gap-6">
             <div className="text-center">
               <span className="text-xs text-slate-500 block">Polygon Mainnet</span>
-              <span className="text-sm font-mono text-green-400 flex items-center gap-1">
-                 {isLive ? 'Connected' : 'Connecting...'}
+              <span className={`text-sm font-mono flex items-center gap-1 ${error ? 'text-red-400' : 'text-green-400'}`}>
+                 {error ? '⚠ Connection Issue' : isLive ? 'Connected' : 'Connecting...'}
               </span>
             </div>
             <div className="text-center">
@@ -305,6 +345,17 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
             Alert Config
           </button>
         </div>
+        
+        {/* Error Banner for Main View */}
+        {error && (
+            <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-2 text-xs text-red-200 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                    <Icons.AlertTriangle className="w-3 h-3" />
+                    {error}
+                </span>
+                <button onClick={handleRetry} className="underline hover:text-white">Retry</button>
+            </div>
+        )}
 
         {/* Dashboard Grid */}
         <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -341,7 +392,7 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
             <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden flex flex-col h-[400px]">
               <div className="p-4 border-b border-slate-700 bg-slate-800/50">
                 <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                  <Icons.Radio className="w-4 h-4 text-red-500 animate-pulse" /> Live Event Feed (Polygon Mainnet)
+                  <Icons.Radio className={`w-4 h-4 ${isLive ? 'text-red-500 animate-pulse' : 'text-slate-500'}`} /> Live Event Feed (Polygon Mainnet)
                 </h3>
               </div>
               <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
@@ -375,7 +426,11 @@ export const MonitoringDashboard: React.FC<MonitoringDashboardProps> = ({ onBack
                   ))}
                   {contracts.flatMap(c => c.events).length === 0 && (
                      <div className="text-center p-10 text-slate-500">
-                        {isLive ? 'Waiting for events on monitored contracts...' : 'Initializing connection to Polygon...'}
+                        {error 
+                           ? <span className="text-red-400">Connection Interrupted</span> 
+                           : isLive 
+                              ? 'Waiting for events on monitored contracts...' 
+                              : 'Initializing connection to Polygon...'}
                      </div>
                   )}
               </div>

@@ -57,6 +57,7 @@ export interface AuditReport {
   economicAnalysis: EconomicRisk[];
   upgradeabilityAnalysis: UpgradeabilityRisk[];
   formalVerificationSuggestions: string[];
+  modelUsed?: string; // Track which AI model generated the report
 }
 
 export interface JobProgress {

@@ -2,80 +2,94 @@
 
 ## 1. System Architecture
 
-AuditGPT operates as a client-side Single Page Application (SPA) that orchestrates interactions between the user, the Polygon Blockchain, and the Google Gemini AI engine.
+AuditGPT operates as a high-performance Single Page Application (SPA) built with React and Vite. It orchestrates interactions between the user, the Polygon Blockchain (via RPC), and the Google Gemini AI engine.
 
 ### High-Level Data Flow
 
 1.  **Input Layer**: 
-    - User inputs a Contract Address or pastes Solidity Source Code.
-    - Application validates inputs and API keys.
-2.  **Data Retrieval Layer (`polygonService.ts`)**:
-    - Connects to Polygon RPC nodes to verify contract existence.
-    - Queries PolygonScan API to fetch verified source code.
-    - Flattens multi-file source code (JSON standard input) into a single analysis-ready string.
-3.  **Analysis Layer (`geminiService.ts`)**:
-    - Constructs a complex prompt context for Gemini 3.0 Pro.
-    - Utilizes **Thinking Mode (Budget: 32k tokens)** to simulate deep reasoning and static analysis.
-    - Enforces a strict JSON Schema for structured output.
-4.  **Presentation Layer (`AuditDashboard.tsx`)**:
-    - Renders the structured data into interactive tabs (Security, Gas, Economic, Upgrade).
-    - Visualizes metrics using Recharts.
-    - Generates PDF reports using `jspdf`.
+    - Users provide raw Solidity Source Code via the secure editor.
+    - Input is validated for length and basic syntax.
+2.  **Analysis Layer (`geminiService.ts`)**:
+    - **Engine**: Google Gemini 3.0 Pro (Thinking Mode).
+    - **Configuration**:
+        - **Thinking Budget**: 32,768 tokens (Max reasoning capability).
+        - **Determinism**: `temperature: 0`, `topK: 1`, `topP: 1`, `seed: 42`.
+        - **Fallback**: Automatically downgrades to Gemini 2.5 Flash if the Pro model is unavailable or rate-limited.
+    - **Output**: Strict JSON schema validation ensures predictable data structures.
+3.  **Monitoring Layer (`MonitoringDashboard.tsx`)**:
+    - **Connection**: Direct WebSocket/HTTP polling to Polygon Public RPC nodes (e.g., `polygon-rpc.com`).
+    - **Strategy**: Polls `getFeeData` and `getLogs` every 4 seconds (aligned with Polygon block time).
+    - **Resilience**: Implements timeouts, error catching for Rate Limits (429), and manual retry mechanisms.
+4.  **Presentation Layer**:
+    - **AuditDashboard**: Interactive visualization of security findings, gas savings, and economic risks.
+    - **PDF Generator**: Client-side PDF creation using `jspdf`, rendering code snippets and formatted tables.
 
 ## 2. Core Modules
 
 ### 2.1 Security & Vulnerability Engine
-This module simulates the behavior of tools like Slither and Mythril. It specifically looks for:
-- **SWC Registry Mappings**: Reentrancy (SWC-107), Unchecked Call (SWC-104), etc.
-- **Logic Errors**: Business logic flaws that standard static analysis might miss.
-- **Severity Classification**: High, Medium, Low, Info based on exploitability and impact.
+Simulates static analysis tools to detect:
+- **Critical Vulnerabilities**: Reentrancy, Overflow, Access Control.
+- **Logic Flaws**: Business logic errors often missed by automated tools.
+- **Classification**: Findings are ranked by Severity (High/Medium/Low) and Confidence.
 
 ### 2.2 Gas Optimization Profiler
-Analyzes the code for EVM efficiency:
-- **Storage Layout**: Checks for variable packing opportunities (e.g., `uint128` + `uint128` in one slot).
-- **Memory vs Calldata**: Recommends `calldata` for external function arguments.
-- **Loop Efficiency**: Identifies expensive operations inside loops.
+Analyzes EVM execution cost:
+- **Storage Layout**: checks for tight variable packing.
+- **Memory vs Calldata**: Optimizes data location for external calls.
+- **Opcode Efficiency**: Identifies expensive operations in hot loops.
 
 ### 2.3 Economic Risk Modeler
 Evaluates financial attack vectors:
-- **Flash Loans**: Checks if state changes can be manipulated by massive capital in a single block.
-- **Oracle Dependency**: Identifies reliance on spot prices (e.g., `uniswapPair.getReserves`) without TWAP.
+- **Flash Loan Resilience**: Checks dependency on spot balances.
+- **Oracle Manipulation**: Validates price feed sources.
+- **Incentive Alignment**: Checks for game-theoretic weaknesses.
 
-### 2.4 Monitoring Dashboard (`MonitoringDashboard.tsx`)
-*Note: Currently runs in simulation mode for demonstration.*
-- **Event Loop**: mimics a WebSocket connection to a blockchain node.
-- **Pattern Matching**: Simulates heuristics for "Gas Spikes" and "High Value Transfers".
-- **Alerting Logic**: Evaluates simulated events against user-defined thresholds.
+### 2.4 Upgradeability & Proxy Analysis
+Dedicated module for upgradeable contracts:
+- **Proxy Pattern Detection**: UUPS, Transparent, Beacon.
+- **Storage Collisions**: Checks for layout compatibility between upgrades.
+- **Initialization Safety**: Verifies `initialize` functions are protected.
+
+### 2.5 Live Monitoring Dashboard
+A real-time operational view:
+- **Gas Tracker**: Plots Gwei trends.
+- **Event Watcher**: Decodes logs for monitored contracts.
+- **Alert System**: Configurable thresholds for value transfers.
 
 ## 3. Services & APIs
 
 ### `performFullAudit(sourceCode, contractName)`
-- **Input**: Raw Solidity string.
-- **Model**: `gemini-3-pro-preview`.
-- **Output**: `AuditReport` object containing vulnerabilities, gas tips, and scores.
-- **Error Handling**: Includes JSON repair logic to handle markdown fences in LLM responses.
+- **Purpose**: Main entry point for the AI auditing pipeline.
+- **Logic**: 
+  1. Prepares prompts with strict system instructions.
+  2. Calls Gemini 3.0 Pro.
+  3. Falls back to 2.5 Flash on failure.
+  4. Parses and sanitizes JSON output using Regex.
+- **Returns**: `AuditReport` object.
 
-### `fetchContractData(address, apiKey)`
-- **Input**: Polygon Address.
-- **Process**:
-    1.  Ping RPC to verify bytecode exists.
-    2.  Call PolygonScan `getsourcecode`.
-    3.  Parse result (handles logic for Single File, Multi-Part, and Standard JSON Input).
-- **Output**: Flattened source code string.
+### `MonitoringDashboard.tsx` (Internal Service)
+- **Purpose**: Manages blockchain connectivity.
+- **Logic**:
+  1. Initializes `ethers.JsonRpcProvider`.
+  2. Polls for `blockNumber` and `feeData`.
+  3. Filters logs for user-defined contract addresses.
+  4. Updates local state with new events.
 
 ## 4. Data Types (`types.ts`)
 
-The application relies on strict TypeScript interfaces to ensure type safety across the pipeline. Key interfaces include:
-- `AuditReport`: The root object for analysis results.
-- `Vulnerability`: Structure for a security finding (id, severity, remediation, codeFix, impact, confidence).
-- `GasOptimization`: Structure for gas saving tips (category, potentialSavings, codeSnippet).
-- `EconomicRisk`: Structure for financial vectors (vector, riskLevel, scenario, mitigation).
-- `JobProgress`: Tracks the status of the multi-step audit pipeline (fetch, static, gas, etc.).
-- `AppState`: Manages the global view state (IDLE, PROCESSING, RESULTS, MONITORING, DOCUMENTATION).
+The application enforces strict typing:
+- `AuditReport`: Root object containing all analysis arrays.
+- `Vulnerability`: Schema for security findings.
+- `GasOptimization`: Schema for efficiency tips.
+- `EconomicRisk`: Schema for financial vectors.
+- `UpgradeabilityRisk`: Schema for proxy analysis.
+- `MonitoringEvent`: Schema for live blockchain events.
 
 ## 5. UI/UX Components
 
-- **AuditDashboard**: The main report viewer. Uses `recharts` for visualization and tabbed navigation for different analysis verticals.
-- **MonitoringDashboard**: A simulation environment for real-time contract watching.
-- **Icons**: Centralized Lucide-React icon export for consistency.
-- **pdfGenerator**: A utility using `jspdf-autotable` to transform the `AuditReport` JSON into a professional PDF document.
+- **AuditDashboard**: Tabbed interface for viewing reports. Includes `recharts` for vulnerability distribution.
+- **Icons**: Centralized library based on `lucide-react`.
+- **PDF Generator**: robust utility to export reports, featuring:
+  - Automatic page breaks.
+  - Syntax highlighting-style boxes for code.
+  - Severity-colored badges.

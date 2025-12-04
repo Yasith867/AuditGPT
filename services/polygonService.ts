@@ -3,12 +3,16 @@ import { ethers } from 'ethers';
 // List of fallback RPCs to try in order
 const RPC_URLS = [
   "https://polygon-rpc.com",
+  "https://rpc.ankr.com/polygon",
+  "https://1rpc.io/matic",
   "https://rpc-mainnet.matic.network", 
   "https://matic-mainnet.chainstacklabs.com",
   "https://polygon-bor.publicnode.com"
 ];
 
 const POLYGONSCAN_API_URL = "https://api.polygonscan.com/api";
+// Use provided key as fallback to avoid rate limits
+const DEFAULT_POLYGONSCAN_KEY = "A9S24XYT5PVINRYUXTF5IY79ZYSSXABZ7W";
 
 interface ContractData {
   name: string;
@@ -25,11 +29,17 @@ const getWorkingProvider = async (logger: (msg: string) => void): Promise<ethers
   for (const url of RPC_URLS) {
     try {
       const provider = new ethers.JsonRpcProvider(url);
-      // Lightweight check to see if provider is responsive
-      await provider.getNetwork();
+      
+      // Enforce a timeout for the network check
+      const checkNetwork = Promise.race([
+        provider.getNetwork(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
+      ]);
+
+      await checkNetwork;
       return provider;
     } catch (e) {
-      logger(`RPC ${url} failed, trying next...`);
+      // logger(`RPC ${url} failed/slow, trying next...`);
       continue;
     }
   }
@@ -57,19 +67,21 @@ export const fetchContractData = async (
     if (error.message.includes('Address is not a contract')) {
       throw error;
     }
-    throw new Error(`RPC Connection Failed: ${error.message}`);
+    logger(`RPC Verification Warning: ${error.message}. Proceeding to fetch source...`, 'warning');
+    // We proceed even if RPC check fails, assuming PolygonScan might still have data
   }
 
   // 2. Fetch source from PolygonScan
   logger('Fetching verified source code from PolygonScan...', 'info');
   
-  // Use user key or empty (free tier)
-  const keyParam = apiKey ? `&apikey=${apiKey}` : ''; 
+  // Use user key or default
+  const activeKey = apiKey.trim() || DEFAULT_POLYGONSCAN_KEY;
+  const keyParam = `&apikey=${activeKey}`;
   const url = `${POLYGONSCAN_API_URL}?module=contract&action=getsourcecode&address=${address}${keyParam}`;
 
   let data;
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) {
         throw new Error(`HTTP Error ${response.status}`);
     }

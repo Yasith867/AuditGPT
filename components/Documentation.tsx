@@ -37,15 +37,9 @@ export const Documentation: React.FC<DocumentationProps> = ({ onBack }) => {
           </h2>
           <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 space-y-4 shadow-lg">
             <div>
-              <h3 className="font-medium text-white mb-1 flex items-center gap-2"><Icons.FileCode className="w-4 h-4"/> Source Code Mode (Recommended)</h3>
+              <h3 className="font-medium text-white mb-1 flex items-center gap-2"><Icons.FileCode className="w-4 h-4"/> Source Code Mode</h3>
               <p className="text-sm text-slate-400">
                 Paste your Solidity smart contract code directly into the editor. This provides the AI with the most context and allows for precise line-by-line analysis and remediation suggestions.
-              </p>
-            </div>
-            <div className="border-t border-slate-700 pt-4">
-              <h3 className="font-medium text-white mb-1 flex items-center gap-2"><Icons.Search className="w-4 h-4"/> Contract Address Mode</h3>
-              <p className="text-sm text-slate-400">
-                Enter a deployed Polygon PoS contract address (0x...). The system attempts to fetch verified source code from Polygonscan. If unverified, it attempts to decompile the bytecode, though accuracy may vary.
               </p>
             </div>
           </div>

@@ -2,17 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Icons } from './components/Icons';
 import { AppState, LogEntry, AuditReport, JobProgress, AnalysisStatus } from './types';
 import { performFullAudit } from './services/geminiService';
-import { fetchContractData, isValidAddress } from './services/polygonService';
 import { AuditDashboard } from './components/AuditDashboard';
 import { Documentation } from './components/Documentation';
 import { MonitoringDashboard } from './components/MonitoringDashboard';
 
 export default function App() {
   const [appState, setAppState] = useState<AppState>(AppState.IDLE);
-  const [inputMode, setInputMode] = useState<'address' | 'source'>('address');
-  const [addressInput, setAddressInput] = useState('');
   const [sourceInput, setSourceInput] = useState('');
-  const [apiKey, setApiKey] = useState(''); 
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [report, setReport] = useState<AuditReport | null>(null);
   const [jobProgress, setJobProgress] = useState<JobProgress>({
@@ -36,26 +32,9 @@ export default function App() {
 
   const runAuditJob = async () => {
     // Validation
-    if (inputMode === 'address') {
-      if (!addressInput.trim()) return;
-      if (!isValidAddress(addressInput)) {
-        addLog('Invalid Polygon Address Format', 'error');
-        return;
-      }
-
-      // Validate API Key if provided
-      if (apiKey.trim()) {
-        const keyPattern = /^[A-Za-z0-9]{34}$/;
-        if (!keyPattern.test(apiKey.trim())) {
-          addLog('Invalid API Key format. It must be 34 alphanumeric characters.', 'error');
-          return;
-        }
-      }
-    } else {
-      if (!sourceInput.trim() || sourceInput.length < 50) {
-        addLog('Source code is too short or empty.', 'error');
-        return;
-      }
+    if (!sourceInput.trim() || sourceInput.length < 50) {
+      addLog('Source code is too short or empty.', 'error');
+      return;
     }
 
     // Reset State
@@ -72,26 +51,14 @@ export default function App() {
     });
 
     try {
-      addLog(`Initializing Job: ${inputMode === 'address' ? addressInput : 'Manual Source Code'}`, 'process');
+      addLog(`Initializing Job: Manual Source Code Analysis`, 'process');
 
-      let sourceCode = '';
-      let contractName = 'Unknown Contract';
-
-      // --- STEP 1: Fetch Data (Conditional) ---
-      if (inputMode === 'address') {
-        setJobProgress(prev => ({ ...prev, fetch: AnalysisStatus.PROCESSING }));
-        addLog('Phase 1: Retrieving on-chain data...', 'info');
-        // Pass trimmed API key
-        const contractData = await fetchContractData(addressInput, apiKey.trim(), addLog);
-        sourceCode = contractData.sourceCode;
-        contractName = contractData.name;
-        setJobProgress(prev => ({ ...prev, fetch: AnalysisStatus.COMPLETED, staticAnalysis: AnalysisStatus.PROCESSING }));
-      } else {
-        setJobProgress(prev => ({ ...prev, fetch: AnalysisStatus.COMPLETED, staticAnalysis: AnalysisStatus.PROCESSING }));
-        addLog('Phase 1: Using provided source code input.', 'info');
-        sourceCode = sourceInput;
-        contractName = "Uploaded Contract";
-      }
+      // --- STEP 1: Skip Fetch (Source Provided) ---
+      setJobProgress(prev => ({ ...prev, fetch: AnalysisStatus.COMPLETED, staticAnalysis: AnalysisStatus.PROCESSING }));
+      addLog('Phase 1: Analyzing provided source code input.', 'info');
+      
+      const sourceCode = sourceInput;
+      const contractName = "Uploaded Contract";
       
       // --- STEP 2: Run Analysis Engine ---
       addLog('Phase 2: Initializing Analysis Engine (Gemini 3.0 Pro - Thinking Mode)...', 'info');
@@ -109,11 +76,7 @@ export default function App() {
       // Real API Call
       const fullReport = await performFullAudit(sourceCode, contractName);
       
-      if (inputMode === 'address') {
-        fullReport.contractAddress = addressInput;
-      } else {
-        fullReport.contractAddress = "N/A (Source Input)";
-      }
+      fullReport.contractAddress = "N/A (Source Input)";
 
       // Update progress sequentially for visual effect (simulating pipeline completion)
       setJobProgress(prev => ({ ...prev, staticAnalysis: AnalysisStatus.COMPLETED }));
@@ -198,7 +161,13 @@ export default function App() {
         ) : appState === AppState.MONITORING ? (
           <MonitoringDashboard onBack={() => setAppState(AppState.IDLE)} />
         ) : appState === AppState.RESULTS && report ? (
-          <AuditDashboard report={report} onReset={() => setAppState(AppState.IDLE)} />
+          <AuditDashboard 
+            report={report} 
+            onReset={() => {
+              setAppState(AppState.IDLE);
+              setSourceInput('');
+            }} 
+          />
         ) : (
           <div className="max-w-4xl mx-auto px-4 py-16 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[calc(100vh-64px)]">
             
@@ -206,14 +175,14 @@ export default function App() {
             <div className="text-center mb-10 space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-xs font-medium mb-4">
                 <Icons.Zap className="w-3 h-3 text-yellow-400" />
-                <span>Powered by Gemini 3.0 Pro (Thinking Mode) & PolygonScan</span>
+                <span>Powered by Gemini 3.0 Pro (Thinking Mode)</span>
               </div>
               <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white leading-tight">
                 Smart Contract Audit <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 animate-gradient">on Polygon</span>
               </h1>
               <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-                Enter a verified contract address or paste source code to perform a real-time deep static analysis, gas profiling, and economic security check.
+                Paste source code to perform a real-time deep static analysis, gas profiling, and economic security check.
               </p>
             </div>
 
@@ -221,89 +190,30 @@ export default function App() {
             <div className="w-full max-w-2xl bg-slate-800/40 backdrop-blur border border-slate-700 rounded-2xl p-2 shadow-2xl relative overflow-hidden transition-all duration-300">
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 pointer-events-none"></div>
               
-              {/* Input Tabs */}
-              <div className="flex p-2 bg-slate-900/50 rounded-t-xl gap-1">
-                 <button
-                    onClick={() => setInputMode('address')}
-                    className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all ${
-                       inputMode === 'address' 
-                       ? 'bg-slate-700 text-white shadow-sm' 
-                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                    }`}
-                 >
-                    <Icons.Search className="w-3 h-3" />
-                    Verified Address
-                 </button>
-                 <button
-                    onClick={() => setInputMode('source')}
-                    className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all ${
-                       inputMode === 'source' 
-                       ? 'bg-slate-700 text-white shadow-sm' 
-                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                    }`}
-                 >
-                    <Icons.FileCode className="w-3 h-3" />
-                    Paste Source Code
-                 </button>
-              </div>
-
               <div className="p-6 space-y-4 relative z-10">
-                
-                {inputMode === 'address' ? (
-                  <>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                        Target Contract Address (Polygon)
-                      </label>
-                      <div className="relative">
-                        <Icons.Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" />
-                        <input
-                          type="text"
-                          placeholder="0x..."
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-11 pr-4 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-mono text-sm shadow-inner transition-all"
-                          value={addressInput}
-                          onChange={(e) => setAddressInput(e.target.value)}
-                          disabled={appState === AppState.PROCESSING}
-                        />
-                      </div>
-                    </div>
-                    {/* Optional API Key */}
-                    <div>
-                      <div className="relative group">
-                        <input
-                          type="password"
-                          placeholder="Optional: PolygonScan API Key (Recommended for high throughput)"
-                          className="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg py-2 px-4 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-500/30 transition-all"
-                          value={apiKey}
-                          onChange={(e) => setApiKey(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="space-y-2">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                        Solidity Source Code
-                    </label>
-                    <div className="relative">
-                      <textarea
-                         className="w-full h-48 bg-slate-900 border border-slate-700 rounded-xl p-4 text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-mono text-xs shadow-inner custom-scrollbar resize-none leading-relaxed"
-                         placeholder="// Paste your Solidity code here..."
-                         value={sourceInput}
-                         onChange={(e) => setSourceInput(e.target.value)}
-                         disabled={appState === AppState.PROCESSING}
-                         spellCheck={false}
-                      />
-                      <div className="absolute bottom-2 right-4 text-[10px] text-slate-600">
-                        {sourceInput.length} chars
-                      </div>
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <Icons.FileCode className="w-4 h-4" />
+                      Solidity Source Code
+                  </label>
+                  <div className="relative">
+                    <textarea
+                        className="w-full h-48 bg-slate-900 border border-slate-700 rounded-xl p-4 text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-mono text-xs shadow-inner custom-scrollbar resize-none leading-relaxed"
+                        placeholder="// Paste your Solidity code here..."
+                        value={sourceInput}
+                        onChange={(e) => setSourceInput(e.target.value)}
+                        disabled={appState === AppState.PROCESSING}
+                        spellCheck={false}
+                    />
+                    <div className="absolute bottom-2 right-4 text-[10px] text-slate-600">
+                      {sourceInput.length} chars
                     </div>
                   </div>
-                )}
+                </div>
 
                 <button
                   onClick={runAuditJob}
-                  disabled={appState === AppState.PROCESSING || (inputMode === 'address' ? !addressInput : !sourceInput)}
+                  disabled={appState === AppState.PROCESSING || !sourceInput}
                   className={`w-full py-4 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-3 relative overflow-hidden group ${
                     appState === AppState.PROCESSING
                       ? 'bg-slate-700 cursor-not-allowed'
@@ -331,7 +241,7 @@ export default function App() {
                 
                 {/* Pipeline Visualizer */}
                 <div className="grid grid-cols-6 gap-2">
-                   <StatusStep label="Fetch" status={jobProgress.fetch} icon={Icons.Download} />
+                   <StatusStep label="Init" status={jobProgress.fetch} icon={Icons.Terminal} />
                    <StatusStep label="Static" status={jobProgress.staticAnalysis} icon={Icons.Code} />
                    <StatusStep label="Gas" status={jobProgress.gasAnalysis} icon={Icons.Zap} />
                    <StatusStep label="Econ" status={jobProgress.economicAnalysis} icon={Icons.Activity} />

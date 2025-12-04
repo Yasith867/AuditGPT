@@ -124,8 +124,10 @@ export const performFullAudit = async (sourceCode: string, contractName?: string
         systemInstruction: AUDIT_SYSTEM_PROMPT,
         responseMimeType: "application/json",
         responseSchema: REPORT_SCHEMA,
-        // Force deterministic output
+        // Force deterministic output - strictest settings
         temperature: 0,
+        topK: 1,
+        topP: 1,
         seed: 42,
       };
 
@@ -133,7 +135,7 @@ export const performFullAudit = async (sourceCode: string, contractName?: string
         config.thinkingConfig = { thinkingBudget: 32768 };
       }
 
-      return await ai.models.generateContent({
+      const response = await ai.models.generateContent({
         model: modelName,
         contents: [
           {
@@ -143,22 +145,24 @@ export const performFullAudit = async (sourceCode: string, contractName?: string
         ],
         config: config
       });
+      
+      return { response, modelUsed: modelName };
   };
 
   try {
-    let response;
+    let result;
     try {
       // First try with the powerful thinking model
-      response = await runAnalysis('gemini-3-pro-preview', true);
+      result = await runAnalysis('gemini-3-pro-preview', true);
     } catch (primaryError: any) {
       console.warn("Gemini 3.0 Pro failed, falling back to Flash...", primaryError);
       // Fallback to Flash if Pro fails (e.g. 503, 429, or model access issues)
-      response = await runAnalysis('gemini-2.5-flash', false);
+      result = await runAnalysis('gemini-2.5-flash', false);
     }
 
-    if (!response.text) throw new Error("AI Analysis failed to generate output");
+    if (!result.response.text) throw new Error("AI Analysis failed to generate output");
 
-    let cleanJson = response.text.trim();
+    let cleanJson = result.response.text.trim();
     
     // Robust JSON Extraction
     // 1. Try to find markdown block
@@ -178,7 +182,7 @@ export const performFullAudit = async (sourceCode: string, contractName?: string
     try {
       data = JSON.parse(cleanJson);
     } catch (parseError) {
-      console.error("JSON Parse Error:", parseError, "Raw Output:", response.text);
+      console.error("JSON Parse Error:", parseError, "Raw Output:", result.response.text);
       throw new Error("Failed to parse AI Analysis results. The model output was not valid JSON.");
     }
 
@@ -193,7 +197,8 @@ export const performFullAudit = async (sourceCode: string, contractName?: string
       gasAnalysis: data.gasAnalysis,
       economicAnalysis: data.economicAnalysis.map((e: any) => ({ ...e, riskLevel: e.riskLevel as Severity })),
       upgradeabilityAnalysis: (data.upgradeabilityAnalysis || []).map((u: any) => ({ ...u, severity: u.severity as Severity })),
-      formalVerificationSuggestions: data.formalVerificationSuggestions
+      formalVerificationSuggestions: data.formalVerificationSuggestions,
+      modelUsed: result.modelUsed // Pass the actual model used to the report
     };
 
   } catch (error) {

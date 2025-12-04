@@ -51,6 +51,13 @@ export const AuditDashboard: React.FC<AuditDashboardProps> = ({ report, onReset 
                 {report.contractAddress.substring(0,6)}...{report.contractAddress.substring(38)}
               </span>
             )}
+             {/* Model Indicator */}
+             {report.modelUsed && (
+               <span className="flex items-center gap-1 px-3 py-1 text-xs font-mono bg-indigo-500/10 text-indigo-400 rounded-full border border-indigo-500/20">
+                 <Icons.Cpu className="w-3 h-3" />
+                 {report.modelUsed}
+               </span>
+             )}
           </div>
           <p className="text-slate-400 text-sm max-w-3xl leading-relaxed">{report.summary}</p>
         </div>
