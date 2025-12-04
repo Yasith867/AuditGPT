@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Icons } from './Icons';
 
@@ -23,47 +24,35 @@ export const LandingSections: React.FC = () => {
 
       {/* Feature List */}
       <section>
-        <div className="text-center mb-12">
+        <div className="text-center mb-16">
           <h2 className="text-3xl font-bold text-white mb-4">Complete Security Lifecycle</h2>
           <p className="text-slate-400 max-w-2xl mx-auto">
             From pre-deployment static analysis to real-time on-chain monitoring, AuditGPT covers every angle of smart contract security.
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 max-w-5xl mx-auto">
+        <div className="flex flex-col max-w-4xl mx-auto border-t border-slate-800">
           <FeatureRow 
-            color="text-purple-400"
-            bg="bg-purple-500/5 border-purple-500/10"
             title="Deep Static Analysis"
             desc="Detects critical vulnerabilities like Reentrancy, Overflows, and Access Control failures using deterministic AI reasoning."
           />
           <FeatureRow 
-            color="text-yellow-400"
-            bg="bg-yellow-500/5 border-yellow-500/10"
             title="Gas Optimization"
             desc="Identifies expensive loops, storage inefficiencies, and redundant operations to reduce execution costs."
           />
           <FeatureRow 
-            color="text-red-400"
-            bg="bg-red-500/5 border-red-500/10"
             title="Economic Risk Modeling"
             desc="Simulates complex attack vectors like Flash Loans, Oracle Manipulation, and Sandwich attacks."
           />
            <FeatureRow 
-            color="text-blue-400"
-            bg="bg-blue-500/5 border-blue-500/10"
             title="Upgradeability Checks"
             desc="Verifies proxy patterns (Diamond, UUPS), storage slot collisions, and initialization safety."
           />
           <FeatureRow 
-            color="text-green-400"
-            bg="bg-green-500/5 border-green-500/10"
             title="Live Watchtower"
             desc="Connects to Polygon RPCs to monitor gas prices, decode events, and alert on suspicious activity in real-time."
           />
           <FeatureRow 
-            color="text-indigo-400"
-            bg="bg-indigo-500/5 border-indigo-500/10"
             title="Professional Reports"
             desc="Generates executive PDF reports with severity scores, remediation steps, and auto-generated code fixes."
           />
@@ -112,10 +101,10 @@ export const LandingSections: React.FC = () => {
   );
 };
 
-const FeatureRow = ({ title, desc, color, bg }: any) => (
-  <div className={`p-4 rounded-lg border transition-all duration-300 hover:bg-slate-800/50 ${bg} flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-8`}>
-    <h3 className={`text-base font-bold ${color} md:w-56 shrink-0`}>{title}</h3>
-    <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+const FeatureRow = ({ title, desc }: any) => (
+  <div className="py-6 border-b border-slate-800 flex flex-col md:flex-row items-start md:items-baseline gap-2 md:gap-12 hover:bg-slate-800/30 transition-colors px-4 rounded-lg">
+    <h3 className="text-lg font-bold text-blue-400 md:w-64 shrink-0">{title}</h3>
+    <p className="text-slate-400 text-base leading-relaxed">{desc}</p>
   </div>
 );
 

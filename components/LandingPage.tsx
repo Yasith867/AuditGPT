@@ -45,8 +45,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunch, onLearnMore 
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-xs font-medium mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <Icons.Zap className="w-3 h-3 text-yellow-400" />
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-xs font-medium mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <span>Powered by Gemini 3.0 Pro (Thinking Mode)</span>
           </div>
           
@@ -62,9 +61,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunch, onLearnMore 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
             <button 
               onClick={onLaunch}
-              className="px-8 py-4 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 shadow-lg shadow-purple-500/25 transform hover:-translate-y-1 transition-all flex items-center gap-2 text-lg"
+              className="px-8 py-4 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 shadow-lg shadow-purple-500/25 transform hover:-translate-y-1 transition-all text-lg"
             >
-              <Logo className="w-6 h-6 text-white" />
               Start Free Audit
             </button>
             <button 
