@@ -1,3 +1,4 @@
+
 export enum Severity {
   HIGH = 'High',
   MEDIUM = 'Medium',
@@ -71,6 +72,7 @@ export interface JobProgress {
 }
 
 export enum AppState {
+  LANDING = 'LANDING',
   IDLE = 'IDLE',
   PROCESSING = 'PROCESSING',
   RESULTS = 'RESULTS',

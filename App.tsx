@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Icons } from './components/Icons';
 import { AppState, LogEntry, AuditReport, JobProgress, AnalysisStatus } from './types';
@@ -5,9 +6,10 @@ import { performFullAudit } from './services/geminiService';
 import { AuditDashboard } from './components/AuditDashboard';
 import { Documentation } from './components/Documentation';
 import { MonitoringDashboard } from './components/MonitoringDashboard';
+import { LandingPage } from './components/LandingPage';
 
 export default function App() {
-  const [appState, setAppState] = useState<AppState>(AppState.IDLE);
+  const [appState, setAppState] = useState<AppState>(AppState.LANDING);
   const [sourceInput, setSourceInput] = useState('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [report, setReport] = useState<AuditReport | null>(null);
@@ -137,15 +139,25 @@ export default function App() {
     }
   };
 
+  // Dedicated Landing Page Route
+  if (appState === AppState.LANDING) {
+    return (
+      <LandingPage 
+        onLaunch={() => setAppState(AppState.IDLE)} 
+        onLearnMore={() => setAppState(AppState.DOCUMENTATION)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-purple-500/30">
-      {/* Navbar */}
+      {/* Navbar (App Mode) */}
       <nav className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div 
               className="flex items-center gap-2 cursor-pointer"
-              onClick={() => setAppState(AppState.IDLE)}
+              onClick={() => setAppState(AppState.LANDING)}
             >
               <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20">
                 <Icons.Shield className="w-5 h-5 text-white" />
@@ -190,18 +202,11 @@ export default function App() {
             }} 
           />
         ) : (
-          <div className="max-w-4xl mx-auto px-4 py-16 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[calc(100vh-64px)]">
+          <div className="max-w-6xl mx-auto px-4 py-12 sm:px-6 lg:px-8 flex flex-col items-center justify-start min-h-[calc(100vh-64px)]">
             
-            {/* Hero */}
-            <div className="text-center mb-10 space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-xs font-medium mb-4">
-                <Icons.Zap className="w-3 h-3 text-yellow-400" />
-                <span>Powered by Gemini 3.0 Pro (Thinking Mode)</span>
-              </div>
-              <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white leading-tight">
-                Smart Contract Audit <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 animate-gradient">on Polygon</span>
-              </h1>
+            {/* Simple App Header */}
+            <div className="text-center mb-8 space-y-2 animate-in fade-in slide-in-from-top-4">
+              <h1 className="text-3xl font-bold text-white">Smart Contract Audit on Polygon</h1>
               <p className="text-lg text-slate-400 max-w-2xl mx-auto">
                 Paste source code to perform a real-time deep static analysis, gas profiling, and economic security check.
               </p>
@@ -317,6 +322,7 @@ export default function App() {
                   </div>
                </div>
             )}
+            
           </div>
         )}
       </main>

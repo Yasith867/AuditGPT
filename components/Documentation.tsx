@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Icons } from './Icons';
 
@@ -84,7 +85,49 @@ export const Documentation: React.FC<DocumentationProps> = ({ onBack }) => {
              <li>Front-Running Opportunities</li>
           </ul>
         </section>
+
+        {/* FAQ Section */}
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+            <Icons.Info className="w-5 h-5 text-indigo-400" />
+            Frequently Asked Questions
+          </h2>
+          <div className="space-y-4">
+             <FAQItem 
+               question="Is AuditGPT a replacement for manual audits?"
+               answer="No. While AuditGPT provides production-grade static analysis and can catch many critical vulnerabilities, it should be used as a pre-deployment tool. High-value contracts should always undergo a manual audit by a reputable security firm."
+             />
+             <FAQItem 
+               question="Which networks does AuditGPT support?"
+               answer="The Live Monitoring features are specifically tuned for the Polygon PoS Mainnet. However, the static code analysis engine works for any EVM-compatible Solidity code (Ethereum, Arbitrum, Optimism, etc.)."
+             />
+             <FAQItem 
+               question="Does AuditGPT store my source code?"
+               answer="No. Your code is sent to the Google Gemini API for analysis and returned immediately. We do not persist your contract code in any database."
+             />
+             <FAQItem 
+               question="How does the 'Thinking Mode' work?"
+               answer="AuditGPT uses Google Gemini 3.0 Pro with a high 'thinking budget' (32k tokens). This forces the model to perform a chain-of-thought reasoning process before outputting the final report, significantly reducing hallucinations and increasing the depth of the security review."
+             />
+             <FAQItem 
+               question="Why do I see 'Rate Limit' errors in monitoring?"
+               answer="The monitoring dashboard connects to public Polygon RPC nodes. These free nodes often have rate limits. If you encounter issues, try the 'Retry' button or wait a few seconds. The system auto-recovers from transient network errors."
+             />
+          </div>
+        </section>
       </div>
     </div>
   );
 };
+
+const FAQItem = ({ question, answer }: { question: string, answer: string }) => (
+  <div className="bg-slate-800/50 rounded-lg p-5 border border-slate-700 hover:bg-slate-800 transition-colors">
+    <h3 className="text-white font-medium mb-2 flex items-start gap-2">
+      <Icons.ChevronRight className="w-4 h-4 text-purple-400 mt-1 shrink-0" />
+      {question}
+    </h3>
+    <p className="text-slate-400 text-sm leading-relaxed pl-6">
+      {answer}
+    </p>
+  </div>
+);
