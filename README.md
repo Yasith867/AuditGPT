@@ -9,29 +9,30 @@ AuditGPT is a production-grade, autonomous smart contract auditing platform desi
 
 ## 🚀 Key Features
 
-### 🛡️ Deep Security Analysis
-- **Source Code First**: Analyze Solidity code directly to detect logic errors before deployment.
-- **Deterministic Audits**: Uses fixed seeds and greedy decoding (Temperature 0) to ensure consistent, reproducible results for the same codebase.
-- **Static Analysis Simulation**: Mimics industry-standard tools (Slither, Mythril) to identify:
+### 🛡️ Deep Security Analysis (Source Code Mode)
+- **Direct Code Input**: Paste Solidity source directly for line-by-line analysis.
+- **Visual Progress Pipeline**: Real-time visualization of the audit steps (Static -> Gas -> Economic -> Upgrade).
+- **Deterministic Audits**: Uses fixed seeds (`42`) and greedy decoding (`Temperature 0`, `TopK 1`) to ensure consistent, reproducible results.
+- **Static Analysis Simulation**: Mimics industry-standard tools to identify:
   - Reentrancy (SWC-107)
   - Integer Overflows (SWC-101)
   - Access Control Failures (SWC-105)
   - Unchecked Return Values (SWC-104)
 
 ### 🏗️ Upgradeability & Proxy Checks
-- **Proxy Patterns**: Detects UUPS, Transparent, and Diamond proxy implementations.
+- **Proxy Patterns**: Detects UUPS, Transparent, Beacon, and Diamond proxy implementations.
 - **Storage Safety**: Analyzes storage layout for collisions and validates initialization logic.
-- **Self-Destruct**: Checks for unsafe `selfdestruct` or `delegatecall` usage in implementation contracts.
+- **Self-Destruct**: Checks for unsafe `selfdestruct` or `delegatecall` usage.
 
 ### ⚡ Gas & Economic Optimization
 - **Gas Profiling**: Identifies expensive loops, storage packing inefficiencies, and redundant operations.
 - **Economic Risk Modeling**: Simulates Flash Loan attacks, Price Oracle manipulation, and Front-running scenarios.
 
 ### 📡 Live Monitoring Dashboard
-- **Real-Time Watchtower**: Connects directly to **Polygon Public RPCs** to monitor live blockchain events.
+- **Real-Time Watchtower**: Connects directly to **Polygon Public RPCs** (`polygon-rpc.com`) to monitor live blockchain events.
 - **Live Gas Tracker**: Visualizes real-time gas prices (Gwei) to help time deployments.
-- **Event Feed**: Decodes live transactions and emits alerts for high-value transfers or specific function calls.
-- **Resilience**: Built-in connection health monitoring, auto-reconnection logic, and manual retry triggers.
+- **Event Feed**: Decodes live transactions and emits alerts for high-value transfers.
+- **Resilience**: Built-in connection health monitoring, auto-reconnection logic, and manual **Retry Connection** capabilities.
 
 ### 📄 Professional Reporting
 - **Executive PDF Export**: Generates detailed, professional-grade security reports.
@@ -40,9 +41,9 @@ AuditGPT is a production-grade, autonomous smart contract auditing platform desi
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React 19, TypeScript, Tailwind CSS, Vite
+- **Frontend**: React, TypeScript, Tailwind CSS, Vite
 - **AI Engine**: Google Gemini 3.0 Pro (Thinking Mode, 32k Token Budget)
-- **Blockchain Interaction**: Ethers.js v6 (RPC Polling)
+- **Blockchain**: Ethers.js v6 (Direct RPC Polling)
 - **Visualization**: Recharts (Data Visualization)
 - **Reporting**: jsPDF & jsPDF-AutoTable
 - **Icons**: Lucide React
@@ -83,7 +84,7 @@ AuditGPT is a production-grade, autonomous smart contract auditing platform desi
 1. Navigate to the **Home** screen.
 2. Paste your **Solidity Source Code** into the secure editor.
 3. Click **"Start Security Audit"**.
-4. The system pipeline will execute:
+4. Watch the **Green Progress Bar** as the system pipeline executes:
    - **Static Analysis**: Vulnerability detection.
    - **Gas Profiling**: Optimization suggestions.
    - **Economic Modeling**: Financial risk assessment.
@@ -95,7 +96,8 @@ AuditGPT is a production-grade, autonomous smart contract auditing platform desi
 2. The dashboard automatically connects to the Polygon Mainnet via RPC.
 3. **Add Contract**: Enter a name and address (e.g., a token or vault) to the watchlist.
 4. **Configure Alerts**: Set thresholds for Gas Price (Gwei) or High-Value Transfers.
-5. Watch the **Live Feed** for real-time transaction events and alerts.
+5. Watch the **Live Feed** for real-time transaction events.
+6. If connection drops (e.g., Rate Limit 429), use the **Retry Connection** button.
 
 ## ⚠️ Disclaimer
 

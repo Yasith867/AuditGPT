@@ -17,11 +17,12 @@ AuditGPT operates as a high-performance Single Page Application (SPA) built with
         - **Fallback**: Automatically downgrades to Gemini 2.5 Flash if the Pro model is unavailable or rate-limited.
     - **Output**: Strict JSON schema validation ensures predictable data structures.
 3.  **Monitoring Layer (`MonitoringDashboard.tsx`)**:
-    - **Connection**: Direct WebSocket/HTTP polling to Polygon Public RPC nodes (e.g., `polygon-rpc.com`).
-    - **Strategy**: Polls `getFeeData` and `getLogs` every 4 seconds (aligned with Polygon block time).
-    - **Resilience**: Implements timeouts, error catching for Rate Limits (429), and manual retry mechanisms.
+    - **Connection**: Direct HTTP polling to Polygon Public RPC nodes (e.g., `polygon-rpc.com`).
+    - **Strategy**: Polls `getFeeData` and `getLogs` every **4 seconds** (aligned with Polygon block time).
+    - **Resilience**: Implements timeouts, error catching for Rate Limits (HTTP 429), and manual retry mechanisms via a `retryTrigger` state.
 4.  **Presentation Layer**:
-    - **AuditDashboard**: Interactive visualization of security findings, gas savings, and economic risks.
+    - **Job Progress**: A state machine (`JobProgress`) tracks the audit lifecycle (Fetch -> Static -> Gas -> Economic -> Upgrade -> Report) and renders a visual progress bar.
+    - **AuditDashboard**: Interactive visualization of security findings using `recharts`.
     - **PDF Generator**: Client-side PDF creation using `jspdf`, rendering code snippets and formatted tables.
 
 ## 2. Core Modules
@@ -46,7 +47,7 @@ Evaluates financial attack vectors:
 
 ### 2.4 Upgradeability & Proxy Analysis
 Dedicated module for upgradeable contracts:
-- **Proxy Pattern Detection**: UUPS, Transparent, Beacon.
+- **Proxy Pattern Detection**: UUPS, Transparent, Beacon, Diamond.
 - **Storage Collisions**: Checks for layout compatibility between upgrades.
 - **Initialization Safety**: Verifies `initialize` functions are protected.
 
@@ -54,7 +55,7 @@ Dedicated module for upgradeable contracts:
 A real-time operational view:
 - **Gas Tracker**: Plots Gwei trends.
 - **Event Watcher**: Decodes logs for monitored contracts.
-- **Alert System**: Configurable thresholds for value transfers.
+- **Alert System**: Configurable thresholds for value transfers and gas prices.
 
 ## 3. Services & APIs
 
@@ -64,16 +65,17 @@ A real-time operational view:
   1. Prepares prompts with strict system instructions.
   2. Calls Gemini 3.0 Pro.
   3. Falls back to 2.5 Flash on failure.
-  4. Parses and sanitizes JSON output using Regex.
+  4. Parses and sanitizes JSON output using Regex to handle Markdown blocks.
 - **Returns**: `AuditReport` object.
 
 ### `MonitoringDashboard.tsx` (Internal Service)
 - **Purpose**: Manages blockchain connectivity.
 - **Logic**:
   1. Initializes `ethers.JsonRpcProvider`.
-  2. Polls for `blockNumber` and `feeData`.
+  2. Polls for `blockNumber` and `feeData` every 4s.
   3. Filters logs for user-defined contract addresses.
   4. Updates local state with new events.
+  5. Handles "Retry" actions by re-instantiating the provider.
 
 ## 4. Data Types (`types.ts`)
 
@@ -88,8 +90,9 @@ The application enforces strict typing:
 ## 5. UI/UX Components
 
 - **AuditDashboard**: Tabbed interface for viewing reports. Includes `recharts` for vulnerability distribution.
+- **App.tsx**: Manages global state (`AppState`) and the visual progress bar for audit jobs.
 - **Icons**: Centralized library based on `lucide-react`.
-- **PDF Generator**: robust utility to export reports, featuring:
+- **PDF Generator**: Robust utility to export reports, featuring:
   - Automatic page breaks.
   - Syntax highlighting-style boxes for code.
   - Severity-colored badges.

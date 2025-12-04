@@ -14,10 +14,10 @@
 - [x] **Resilience**: Robust error handling, RPC fallbacks, and connection retry mechanisms.
 
 ## Phase 3: Advanced Analysis (In Progress)
+- [ ] **Custom RPC Support**: Allow users to bring their own RPC endpoints (e.g., Alchemy, Infura).
 - [ ] **Bytecode Decompilation**: Audit unverified contracts directly from raw bytecode.
 - [ ] **Formal Verification**: Integration with symbolic execution engines for mathematical proofs.
 - [ ] **Dependency Scanning**: Auto-detect imported libraries (OpenZeppelin) and check against known CVE databases.
-- [ ] **Solidity Version Manager**: Support specific compiler version nuances during analysis.
 
 ## Phase 4: Ecosystem Integration
 - [ ] **IDE Plugins**: VS Code extension to run AuditGPT directly in the editor.

@@ -11,6 +11,7 @@ export default function App() {
   const [sourceInput, setSourceInput] = useState('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [report, setReport] = useState<AuditReport | null>(null);
+  const [progress, setProgress] = useState(0);
   const [jobProgress, setJobProgress] = useState<JobProgress>({
     fetch: AnalysisStatus.PENDING,
     staticAnalysis: AnalysisStatus.PENDING,
@@ -41,6 +42,7 @@ export default function App() {
     setAppState(AppState.PROCESSING);
     setLogs([]);
     setReport(null);
+    setProgress(0);
     setJobProgress({
       fetch: AnalysisStatus.PENDING,
       staticAnalysis: AnalysisStatus.PENDING,
@@ -49,6 +51,14 @@ export default function App() {
       upgradeAnalysis: AnalysisStatus.PENDING,
       reportGeneration: AnalysisStatus.PENDING
     });
+
+    // Start fake progress for the "Thinking" phase (up to 75%)
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 75) return prev; // Cap at 75% until API returns
+        return prev + (Math.random() * 1.5); // Slow random increment
+      });
+    }, 200);
 
     try {
       addLog(`Initializing Job: Manual Source Code Analysis`, 'process');
@@ -76,32 +86,43 @@ export default function App() {
       // Real API Call
       const fullReport = await performFullAudit(sourceCode, contractName);
       
+      // API Returned - Clear interval and bump progress
+      clearInterval(progressInterval);
+      setProgress(75);
+
       fullReport.contractAddress = "N/A (Source Input)";
 
       // Update progress sequentially for visual effect (simulating pipeline completion)
       setJobProgress(prev => ({ ...prev, staticAnalysis: AnalysisStatus.COMPLETED }));
       addLog(`Static Analysis Complete: ${fullReport.vulnerabilities.length} findings`, 'success');
+      setProgress(82);
       await new Promise(r => setTimeout(r, 400));
 
       setJobProgress(prev => ({ ...prev, gasAnalysis: AnalysisStatus.COMPLETED }));
       addLog(`Gas Profiling Complete: ${fullReport.gasAnalysis.length} optimizations found`, 'success');
+      setProgress(88);
       await new Promise(r => setTimeout(r, 400));
 
       setJobProgress(prev => ({ ...prev, economicAnalysis: AnalysisStatus.COMPLETED }));
       addLog(`Economic Modeling Complete: ${fullReport.economicAnalysis.length} vectors analyzed`, 'success');
+      setProgress(94);
       await new Promise(r => setTimeout(r, 400));
       
       setJobProgress(prev => ({ ...prev, upgradeAnalysis: AnalysisStatus.COMPLETED, reportGeneration: AnalysisStatus.PROCESSING }));
       addLog(`Upgradeability Check Complete: ${fullReport.upgradeabilityAnalysis.length} items reviewed`, 'success');
+      setProgress(98);
       await new Promise(r => setTimeout(r, 400));
 
       setJobProgress(prev => ({ ...prev, reportGeneration: AnalysisStatus.COMPLETED }));
       addLog('Audit Report Generated Successfully', 'success');
+      setProgress(100);
       
       setReport(fullReport);
       setAppState(AppState.RESULTS);
 
     } catch (error: any) {
+      clearInterval(progressInterval);
+      setProgress(0);
       console.error(error);
       addLog(error.message, 'error');
       setAppState(AppState.ERROR);
@@ -220,10 +241,18 @@ export default function App() {
                       : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 shadow-lg shadow-purple-500/25 transform hover:-translate-y-0.5'
                   }`}
                 >
+                  {/* Progress Bar Background */}
+                  {appState === AppState.PROCESSING && (
+                    <div 
+                      className="absolute top-0 left-0 h-full bg-green-500/20 transition-all duration-300 ease-out border-r border-green-500/30"
+                      style={{ width: `${progress}%` }}
+                    />
+                  )}
+
                   {appState === AppState.PROCESSING ? (
                     <>
-                      <Icons.Cpu className="w-5 h-5 animate-spin" />
-                      <span>Processing Job...</span>
+                      <Icons.Cpu className="w-5 h-5 animate-spin relative z-10" />
+                      <span className="relative z-10">Processing Job... {Math.round(progress)}%</span>
                     </>
                   ) : (
                     <>

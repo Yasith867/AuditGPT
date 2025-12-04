@@ -32,11 +32,10 @@ ANALYSIS REQUIREMENTS:
    - Assess Front-running/Sandwich attack opportunities.
 
 4. UPGRADEABILITY & PROXY ANALYSIS:
-   - Identify Proxy patterns (UUPS, Transparent, Beacon, Diamond).
-   - Check for storage layout collisions between potential V1 and V2.
-   - Verify 'initialize' functions are protected and cannot be called twice.
-   - Check for unsafe 'selfdestruct' or 'delegatecall' usage in implementation contracts.
-   - Check for missing gap variables (__gap) in upgradeable parent contracts.
+   - Classify Proxy Pattern: UUPS, Transparent, Beacon, Diamond (EIP-2535), or Minimal.
+   - Beacon/Diamond Specifics: Check for selector clashes, facet management safety, and beacon upgrade authorization.
+   - Storage Layout: Deep analysis of storage slot collisions between versions. Check for variable ordering and gap usage (__gap) in upgradeable parent contracts.
+   - Implementation Safety: Verify '_authorizeUpgrade' exists and is protected. Check for unsafe 'selfdestruct' or 'delegatecall' usage.
 
 OUTPUT FORMAT:
 Return strict JSON adhering to the provided schema. Do not output markdown code blocks.
@@ -99,6 +98,7 @@ const REPORT_SCHEMA: Schema = {
         properties: {
           type: { type: Type.STRING, description: "Type of upgrade issue e.g. Storage Collision" },
           severity: { type: Type.STRING, enum: ["High", "Medium", "Low", "Info"] },
+          proxyType: { type: Type.STRING, description: "Detected proxy pattern (UUPS, Transparent, Beacon, Diamond, etc.)" },
           description: { type: Type.STRING },
           recommendation: { type: Type.STRING }
         },

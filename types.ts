@@ -41,6 +41,7 @@ export interface EconomicRisk {
 export interface UpgradeabilityRisk {
   type: string; // e.g., "Storage Collision", "Unsafe Selfdestruct"
   severity: Severity;
+  proxyType?: string; // e.g., "UUPS", "Transparent", "Beacon", "Diamond"
   description: string;
   recommendation: string;
 }

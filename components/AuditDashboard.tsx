@@ -301,10 +301,17 @@ export const AuditDashboard: React.FC<AuditDashboardProps> = ({ report, onReset 
             {report.upgradeabilityAnalysis && report.upgradeabilityAnalysis.map((item, i) => (
                <div key={i} className="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg">
                   <div className="flex justify-between items-start mb-2">
-                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                        <Icons.GitBranch className="w-5 h-5 text-purple-400" />
-                        {item.type}
-                     </h3>
+                     <div className="flex items-center">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                           <Icons.GitBranch className="w-5 h-5 text-purple-400" />
+                           {item.type}
+                        </h3>
+                        {item.proxyType && item.proxyType !== 'n/a' && item.proxyType !== 'None' && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 ml-3 uppercase tracking-wide">
+                            {item.proxyType}
+                          </span>
+                        )}
+                     </div>
                      <Badge severity={item.severity} />
                   </div>
                   <p className="text-slate-300 text-sm mb-4 leading-relaxed">{item.description}</p>
