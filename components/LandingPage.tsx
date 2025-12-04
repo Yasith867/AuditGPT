@@ -2,6 +2,7 @@
 import React from 'react';
 import { Icons } from './Icons';
 import { LandingSections } from './LandingSections';
+import { Logo } from './Logo';
 
 interface LandingPageProps {
   onLaunch: () => void;
@@ -16,16 +17,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunch, onLearnMore 
       <nav className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20">
-                <Icons.Shield className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 bg-purple-500/20 blur-lg rounded-full"></div>
+                <Logo className="w-9 h-9 relative z-10" />
               </div>
-              <span className="font-bold text-xl tracking-tight">AuditGPT</span>
+              <span className="font-bold text-xl tracking-tight text-white">AuditGPT</span>
             </div>
             <div>
               <button 
                 onClick={onLaunch}
-                className="bg-white text-slate-900 hover:bg-slate-200 px-5 py-2 rounded-lg font-bold text-sm transition-colors"
+                className="bg-white text-slate-900 hover:bg-slate-200 px-5 py-2 rounded-lg font-bold text-sm transition-colors shadow-lg shadow-purple-500/10"
               >
                 Launch App
               </button>
@@ -62,7 +64,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunch, onLearnMore 
               onClick={onLaunch}
               className="px-8 py-4 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 shadow-lg shadow-purple-500/25 transform hover:-translate-y-1 transition-all flex items-center gap-2 text-lg"
             >
-              <Icons.Shield className="w-5 h-5" />
+              <Logo className="w-6 h-6 text-white" />
               Start Free Audit
             </button>
             <button 

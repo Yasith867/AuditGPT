@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Icons } from './components/Icons';
+import { Logo } from './components/Logo';
 import { AppState, LogEntry, AuditReport, JobProgress, AnalysisStatus } from './types';
 import { performFullAudit } from './services/geminiService';
 import { AuditDashboard } from './components/AuditDashboard';
@@ -156,11 +157,12 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div 
-              className="flex items-center gap-2 cursor-pointer"
+              className="flex items-center gap-3 cursor-pointer group"
               onClick={() => setAppState(AppState.LANDING)}
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20">
-                <Icons.Shield className="w-5 h-5 text-white" />
+              <div className="relative">
+                 <div className="absolute inset-0 bg-purple-500/0 group-hover:bg-purple-500/20 blur-md rounded-full transition-all"></div>
+                 <Logo className="w-8 h-8 relative z-10" />
               </div>
               <span className="font-bold text-xl tracking-tight">AuditGPT</span>
             </div>

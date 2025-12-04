@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Icons } from './Icons';
 
@@ -22,7 +21,7 @@ export const LandingSections: React.FC = () => {
         </div>
       </div>
 
-      {/* Feature Grid */}
+      {/* Feature List */}
       <section>
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-white mb-4">Complete Security Lifecycle</h2>
@@ -31,46 +30,40 @@ export const LandingSections: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <FeatureCard 
-            icon={Icons.Shield}
+        <div className="flex flex-col gap-3 max-w-5xl mx-auto">
+          <FeatureRow 
             color="text-purple-400"
-            bg="bg-purple-500/10 border-purple-500/20"
+            bg="bg-purple-500/5 border-purple-500/10"
             title="Deep Static Analysis"
             desc="Detects critical vulnerabilities like Reentrancy, Overflows, and Access Control failures using deterministic AI reasoning."
           />
-          <FeatureCard 
-            icon={Icons.Zap}
+          <FeatureRow 
             color="text-yellow-400"
-            bg="bg-yellow-500/10 border-yellow-500/20"
+            bg="bg-yellow-500/5 border-yellow-500/10"
             title="Gas Optimization"
             desc="Identifies expensive loops, storage inefficiencies, and redundant operations to reduce execution costs."
           />
-          <FeatureCard 
-            icon={Icons.Activity}
+          <FeatureRow 
             color="text-red-400"
-            bg="bg-red-500/10 border-red-500/20"
+            bg="bg-red-500/5 border-red-500/10"
             title="Economic Risk Modeling"
             desc="Simulates complex attack vectors like Flash Loans, Oracle Manipulation, and Sandwich attacks."
           />
-           <FeatureCard 
-            icon={Icons.GitBranch}
+           <FeatureRow 
             color="text-blue-400"
-            bg="bg-blue-500/10 border-blue-500/20"
+            bg="bg-blue-500/5 border-blue-500/10"
             title="Upgradeability Checks"
             desc="Verifies proxy patterns (Diamond, UUPS), storage slot collisions, and initialization safety."
           />
-          <FeatureCard 
-            icon={Icons.Radio}
+          <FeatureRow 
             color="text-green-400"
-            bg="bg-green-500/10 border-green-500/20"
+            bg="bg-green-500/5 border-green-500/10"
             title="Live Watchtower"
             desc="Connects to Polygon RPCs to monitor gas prices, decode events, and alert on suspicious activity in real-time."
           />
-          <FeatureCard 
-            icon={Icons.FileText}
+          <FeatureRow 
             color="text-indigo-400"
-            bg="bg-indigo-500/10 border-indigo-500/20"
+            bg="bg-indigo-500/5 border-indigo-500/10"
             title="Professional Reports"
             desc="Generates executive PDF reports with severity scores, remediation steps, and auto-generated code fixes."
           />
@@ -119,12 +112,9 @@ export const LandingSections: React.FC = () => {
   );
 };
 
-const FeatureCard = ({ icon: Icon, title, desc, color, bg }: any) => (
-  <div className={`p-6 rounded-xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-xl ${bg}`}>
-    <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 bg-slate-900/50 ${color}`}>
-      <Icon className="w-6 h-6" />
-    </div>
-    <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
+const FeatureRow = ({ title, desc, color, bg }: any) => (
+  <div className={`p-4 rounded-lg border transition-all duration-300 hover:bg-slate-800/50 ${bg} flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-8`}>
+    <h3 className={`text-base font-bold ${color} md:w-56 shrink-0`}>{title}</h3>
     <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
   </div>
 );
