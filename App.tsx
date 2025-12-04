@@ -192,7 +192,10 @@ export default function App() {
       {/* Main View */}
       <main className="relative">
         {appState === AppState.DOCUMENTATION ? (
-          <Documentation onBack={() => setAppState(AppState.IDLE)} />
+          <Documentation onBack={() => {
+            setAppState(AppState.IDLE);
+            setSourceInput('');
+          }} />
         ) : appState === AppState.MONITORING ? (
           <MonitoringDashboard onBack={() => setAppState(AppState.IDLE)} />
         ) : appState === AppState.RESULTS && report ? (

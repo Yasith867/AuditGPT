@@ -281,21 +281,27 @@ export const generatePDF = (report: AuditReport) => {
     report.gasAnalysis.forEach((item, index) => {
       checkPageBreak(50);
 
-      // Header Bar
+      // Header Bar - Taller to prevent text overlap (stacked layout)
       doc.setFillColor(240, 253, 244); // Green 50
       doc.setDrawColor(22, 163, 74); // Green 600
-      doc.rect(margin, yPos, pageWidth - (margin * 2), 14, 'FD');
+      doc.rect(margin, yPos, pageWidth - (margin * 2), 18, 'FD');
 
+      // Title Line
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(21, 128, 61); // Green 700
-      doc.text(`Optimization #${index + 1}: ${item.category}`, margin + 3, yPos + 9);
+      doc.text(`Optimization #${index + 1}: ${item.category}`, margin + 3, yPos + 6);
       
-      // Savings Badge Text
+      // Savings Line (Stacked below title)
       doc.setFontSize(10);
-      doc.text(`Savings: ${item.potentialSavings}`, pageWidth - margin - 5, yPos + 9, { align: 'right' });
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(22, 101, 52); // Darker Green
+      const savingsText = item.potentialSavings.toLowerCase().startsWith('savings') 
+        ? item.potentialSavings 
+        : `Savings: ${item.potentialSavings}`;
+      doc.text(savingsText, margin + 3, yPos + 13);
       
-      yPos += 20;
+      yPos += 25;
 
       // Description
       doc.setFont("helvetica", "normal");
